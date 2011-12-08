@@ -105,15 +105,28 @@
     (*enable-D&D-edit* . "enable_DnD_edit")
     ))
 
+(defmacro with-set-default-directory (new-dir &body body)
+  (let (($buffer (gensym))
+        ($org-dir (gensym))
+        ($new-dir (gensym)))
+    `(let* ((,$buffer (selected-buffer))
+            (,$org-dir (default-directory ,$buffer))
+            (,$new-dir ,new-dir))
+       (set-default-directory ,$new-dir ,$buffer)
+       (unwind-protect
+           (progn ,@body)
+         (set-default-directory ,$org-dir ,$buffer)))))
+(setf (get 'with-set-default-directory 'ed::lisp-indent-hook) 1)
 
 (defun xl-cscope-jump-to-xyzzy-source (sym)
   (interactive "SBuild-in symbol: ")
   (multiple-value-bind (cname type)
       (xyzzy-lisp-symbol->c-name sym)
-    (funcall (if (eq type :function)
-                 'cscope-find-global-definition
-               'cscope-find-c-symbol)
-             cname *xl-cscope-xyzzy-source-directory*)
+    (with-set-default-directory *xl-cscope-xyzzy-source-directory*
+      (funcall (if (eq type :function)
+                   'cscope-find-global-definition
+                 'cscope-find-c-symbol)
+               cname *xl-cscope-xyzzy-source-directory*))
     (message "~S => ~S" sym cname)
     ))
 
